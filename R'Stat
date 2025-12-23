@@ -1,0 +1,94 @@
+  library(shiny)
+  
+  ui <- fluidPage(
+    titlePanel("R'Stat – Smart Non-Parametric Test App"),
+    sidebarLayout(
+      sidebarPanel(
+        fileInput("data", "Upload CSV File"),
+        selectInput("test", "Select Test",
+                    choices = c("Mann-Whitney U",
+                                "Wilcoxon Signed-Rank",
+                                "Kruskal-Wallis",
+                                "Friedman",
+                                "Spearman")),
+        actionButton("run", "Run Test")
+      ),
+      mainPanel(
+        tableOutput("results")
+      )
+    )
+  )
+  
+  server <- function(input, output) {
+    
+    observeEvent(input$run, {
+      
+      req(input$data)
+      
+      df <- read.csv(input$data$datapath)
+      
+      if (input$test == "Mann-Whitney U") {
+        test <- wilcox.test(score ~ group, data = df)
+        
+        output$results <- renderTable({
+          data.frame(
+            Test = "Mann-Whitney U",
+            Statistic = as.numeric(test$statistic),
+            P_Value = test$p.value
+          )
+        })
+      }
+      
+      if (input$test == "Wilcoxon Signed-Rank") {
+        test <- wilcox.test(df$before, df$after, paired = TRUE)
+        
+        output$results <- renderTable({
+          data.frame(
+            Test = "Wilcoxon Signed-Rank",
+            Statistic = as.numeric(test$statistic),
+            P_Value = test$p.value
+          )
+        })
+      }
+      
+      if (input$test == "Kruskal-Wallis") {
+        test <- kruskal.test(score ~ group, data = df)
+        
+        output$results <- renderTable({
+          data.frame(
+            Test = "Kruskal-Wallis",
+            Statistic = test$statistic,
+            P_Value = test$p.value
+          )
+        })
+      }
+      
+      if (input$test == "Friedman") {
+        test <- friedman.test(score ~ treatment | subject, data = df)
+        
+        output$results <- renderTable({
+          data.frame(
+            Test = "Friedman",
+            Statistic = test$statistic,
+            P_Value = test$p.value
+          )
+        })
+      }
+      
+      if (input$test == "Spearman") {
+        test <- cor.test(df$x, df$y, method = "spearman")
+        
+        output$results <- renderTable({
+          data.frame(
+            Test = "Spearman Correlation",
+            Correlation = test$estimate,
+            P_Value = test$p.value
+          )
+        })
+      }
+      
+    })
+    
+  }
+  
+  shinyApp(ui, server)
